@@ -1,0 +1,178 @@
+package ant_garbage_collection;
+
+import org.checkerframework.checker.units.qual.t;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import javax.swing.SwingUtilities;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+
+
+public class garbage_collection_main {
+
+    public static void main(String[] args) {
+        
+        JSONObject config = null;
+    // Reading in the JSON file and checking that the values fall between the min and maxes
+        try (InputStream is = garbage_collection_main.class.getClassLoader().getResourceAsStream("config.json")) {
+            if (is == null) {
+                throw new FileNotFoundException("config.json file is not found in resources folder");
+            }
+            // Correct way to convert the InputStream to a String
+            String jsoner = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            config = new JSONObject(jsoner);
+        } catch (FileNotFoundException e) {
+            System.out.println("config.json file is not found in resources folder");
+            e.printStackTrace();
+            System.exit(0);
+        } catch (IOException e) {
+            System.out.println("An error occurred while reading the JSON file.");
+            e.printStackTrace();
+            System.exit(0);
+        } catch (JSONException e) {
+            System.out.println("The JSON file contains invalid JSON.");
+            e.printStackTrace();
+            System.exit(0);
+        }
+        
+
+        // Extract the board size and density values
+        int minBoardSize = config.getJSONObject("boardSize").getInt("min");
+        int maxBoardSize = config.getJSONObject("boardSize").getInt("max");
+        int boardSize = config.getJSONObject("boardSize").getInt("val");
+        double minDensity = config.getJSONObject("garbageDensity").getDouble("min");
+        double maxDensity = config.getJSONObject("garbageDensity").getDouble("max");
+        double density = config.getJSONObject("garbageDensity").getDouble("val");
+        int minAnts = config.getJSONObject("numberOfAnts").getInt("min");
+        int maxAnts = config.getJSONObject("numberOfAnts").getInt("max");
+        int numAnts = config.getJSONObject("numberOfAnts").getInt("val");
+
+
+
+        
+
+        if(boardSize < minBoardSize || boardSize > maxBoardSize){
+            System.out.println("Board size is out of bounds");
+            System.exit(0);
+        }
+        if(density < minDensity || density > maxDensity){
+            System.out.println("Density is out of bounds");
+            System.exit(0);
+        }
+        if(numAnts < minAnts || numAnts > maxAnts){
+            System.out.println("Number of ants is out of bounds");
+            System.exit(0);
+        }
+
+
+        int garbageAmount = (int)(boardSize * boardSize * density);
+        Board theGameBoard = new Board(boardSize, boardSize);
+
+        // ExecutorService executorService = Executors.newFixedThreadPool(numAnts);
+
+        // for (int i = 0; i < numAnts; i++) {
+        //     int numa = i; // For use in the lambda expression
+        //     executorService.submit(() -> {
+        //         runAnt(numa, theGameBoard);
+        //     });
+        // }
+
+        // // Shutdown the executor after all ants have completed their tasks
+        // executorService.shutdown();
+
+
+        System.out.println(boardSize);
+        theGameBoard.generate_garbage(garbageAmount);
+        System.out.println(garbageAmount);
+        //runSimulation(theGameBoard);  
+        SwingUtilities.invokeLater(() -> {
+            SimulationFrame simulationFrame = new SimulationFrame(theGameBoard);
+            // Start the simulation in a new thread to ensure the GUI remains responsive
+            new Thread(() -> runSimulation(theGameBoard, simulationFrame)).start();
+        });  
+        
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private static void runSimulation(Board theGameBoard, SimulationFrame simulationFrame) {
+
+        //theGameBoard.print_board();
+
+      
+        int antx = random_generator.nextInt(25);
+        int anty = random_generator.nextInt(25);
+        Ant theAnt = new Ant(antx, anty, false);
+
+        
+
+
+        System.out.println();
+        System.out.println("ant y is " + anty + "\n");
+        
+        System.out.println();
+        System.out.println("garbage at " + theAnt.get_x() + " " + theAnt.get_y() + " is " + theGameBoard.board[anty][antx] + "\n");
+
+
+
+        for(int iter = 0; iter < 100; iter++){
+            simulationLogic(theGameBoard, theAnt);
+            SwingUtilities.invokeLater(() -> {
+                simulationFrame.updateAntPosition(theAnt.get_x(), theAnt.get_y());
+                simulationFrame.repaintBoard(theGameBoard); // You need to add implementation for this method
+            });
+
+            // Add a small delay to see the changes over time
+            try {
+                Thread.sleep(5000); // The delay in milliseconds
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                Thread.currentThread().interrupt(); // Restore the interrupted status
+                return;
+            }
+        }
+
+        Logging.log2DArrayToFile(theGameBoard.board, "log.txt");
+
+
+}
+
+
+private static void simulationLogic(Board theGameBoard, Ant theAnt) {
+   
+    int x = theAnt.get_x();
+    int y = theAnt.get_y();
+    
+    theAnt.performAction(theGameBoard);
+    int newx = random_generator.nextInt(25);
+    int newy = random_generator.nextInt(25);
+    theAnt.move(newx, newy);
+   // theGameBoard.print_board();
+    //System.out.println("\n");
+    //System.out.println("\n");
+    //System.out.println("\n");
+}
+}
